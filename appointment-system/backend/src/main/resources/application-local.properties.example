@@ -1,0 +1,12 @@
+# Copy to application-local.properties (ignored by git) and fill your local credentials.
+#
+# You can also set environment variables:
+# - DB_USERNAME, DB_PASSWORD
+# - RABBITMQ_USERNAME, RABBITMQ_PASSWORD
+
+spring.datasource.username=root
+spring.datasource.password=YOUR_DB_PASSWORD_HERE
+
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=YOUR_RABBITMQ_PASSWORD_HERE
+
