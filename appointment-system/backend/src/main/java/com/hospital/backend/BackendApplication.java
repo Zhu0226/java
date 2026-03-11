@@ -4,11 +4,16 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-// 排除了默认的底层数据源自动装配，全面拥抱 ShardingSphere
-@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
+// 1. 排除 DataSourceAutoConfiguration (拥抱 ShardingSphere)
+// 2. 【核心修复】: 排除 SecurityAutoConfiguration，禁用 Spring Security 默认的全局拦截，释放跨域预检！
+@SpringBootApplication(exclude = {
+        DataSourceAutoConfiguration.class,
+        SecurityAutoConfiguration.class
+})
 @ComponentScan(basePackages = {"com.hospital"})
 @MapperScan("com.hospital.appointment.mapper")
 @EnableScheduling

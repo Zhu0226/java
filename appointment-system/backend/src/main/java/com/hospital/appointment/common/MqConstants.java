@@ -13,7 +13,7 @@ public class MqConstants {
 
     // 2. 延迟队列 (存放刚下单的消息，不设置消费者，让其自然过期)
     public static final String ORDER_DELAY_QUEUE = "hospital.order.delay.queue";
-    // 延迟队列的路由键
+    //public static final String ORDER_DELAY_QUEUE = "hospital.order.delay.queue_test";    // 延迟队列的路由键
     public static final String ORDER_DELAY_ROUTING_KEY = "order.delay";
 
     // 3. 死信交换机 (当消息在延迟队列过期后，会自动投递到这个交换机)
