@@ -48,4 +48,7 @@ public interface OrderMapper {
     // 【新增】：根据排班ID查询真正的医生ID，用来干掉写死的 888L
     @Select("SELECT doctor_id FROM biz_schedule WHERE id = #{scheduleId}")
     Long selectDoctorIdByScheduleId(@Param("scheduleId") Long scheduleId);
+
+    @Select("SELECT COUNT(1) FROM biz_order WHERE patient_id = #{patientId} AND order_status = #{status} AND is_deleted = 0")
+    int countOrdersByStatus(@Param("patientId") Long patientId, @Param("status") Integer status);
 }

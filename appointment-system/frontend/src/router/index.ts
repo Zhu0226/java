@@ -82,9 +82,9 @@ const routes = [
         component: () => import('../views/patient/OrderList.vue') // 占位，下一步开发
       },
       {
-        path: 'profile',
-        name: 'PatientProfile',
-        component: () => import('../views/patient/Home.vue') // 暂时先用Home占位
+          path: 'profile',
+          name: 'PatientProfile',
+          component: () => import('../views/patient/Profile.vue') // 【修改这里】指向真实的个人中心
       }
     ]
   }

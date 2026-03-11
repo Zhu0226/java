@@ -15,6 +15,10 @@ public interface PatientMapper {
     @Select("SELECT * FROM sys_patient WHERE user_id = #{userId} AND is_deleted = 0")
     SysPatient findByUserId(Long userId);
 
+    // 【本次新增】：根据业务主键查询患者信息
+    @Select("SELECT * FROM sys_patient WHERE id = #{id} AND is_deleted = 0")
+    SysPatient findById(Long id);
+
     @Select("SELECT COUNT(1) FROM sys_patient WHERE phone = #{phone} OR id_card = #{idCard}")
     int checkPhoneOrIdCardExist(@Param("phone") String phone, @Param("idCard") String idCard);
 }
