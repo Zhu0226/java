@@ -15,25 +15,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderServiceImpl implements OrderService {
 
     @Autowired
-    private SeckillGoodsMapper goodsMapper;
+    private SeckillGoodsMapper goodsMapper;// 商品
     @Autowired
-    private SeckillOrderMapper orderMapper;
+    private SeckillOrderMapper orderMapper;// 订单
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)// 开启事务
     public void createOrder(Long userId, Long goodsId) {
-        int dbAffected = goodsMapper.reduceStock(goodsId);
+        int dbAffected = goodsMapper.reduceStock(goodsId);// 数据库减库存
         if (dbAffected == 0) {
             throw new BusinessException(ErrorCode.STOCK_SOLD_OUT, "数据库库存不足");
         }
         try {
-            SeckillOrder order = new SeckillOrder();
-            order.setUserId(userId);
-            order.setGoodsId(goodsId);
-            order.setStatus(0);
-            orderMapper.insert(order);
+            SeckillOrder order = new SeckillOrder();// 创建订单
+            order.setUserId(userId);// 用户ID
+            order.setGoodsId(goodsId);// 商品ID
+            order.setStatus(0);// 订单状态
+            orderMapper.insert(order);// 插入订单
         } catch (DuplicateKeyException e) {
-            throw new BusinessException(ErrorCode.ALREADY_ORDERED);
+            throw new BusinessException(ErrorCode.ALREADY_ORDERED);// 重复订单
         }
     }
 }

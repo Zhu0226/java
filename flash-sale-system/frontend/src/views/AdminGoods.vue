@@ -7,13 +7,16 @@
         <button @click="logout">退出登录</button>
       </div>
     </header>
+    
     <div class="toolbar">
-      <button @click="showForm(null)">新增商品</button>
+      <button v-if="hasEditPerm" @click="showForm(null)">新增商品</button>
     </div>
+    
     <div v-if="loading" class="tip">加载中...</div>
     <div v-else-if="list.length === 0" class="empty">
       <p>暂无商品，点击「新增商品」添加</p>
     </div>
+    
     <table v-else class="table">
       <thead>
         <tr>
@@ -37,9 +40,12 @@
           <td>{{ g.onShelf === 1 ? '是' : '否' }}</td>
           <td>{{ g.activityTag || '-' }}</td>
           <td>
-            <button @click="showForm(g)">编辑</button>
-            <button @click="doPreheat(g)">预热</button>
-            <button @click="doDelete(g.id)">删除</button>
+            <template v-if="hasEditPerm">
+              <button @click="showForm(g)">编辑</button>
+              <button @click="doPreheat(g)">预热</button>
+              <button @click="doDelete(g.id)">删除</button>
+            </template>
+            <span v-else class="text-muted">无操作权限</span>
           </td>
         </tr>
       </tbody>
@@ -91,10 +97,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-// 务必确保你的 src/api/admin.js 文件已经按照上一步的指导重新建立好了！
 import { listGoods, createGoods, updateGoods, deleteGoods, preheat } from '../api/admin.js'
 
 const router = useRouter()
+
+// === RBAC 前端按钮级鉴权核心逻辑 ===
+const perms = JSON.parse(localStorage.getItem('perms') || '[]')
+const hasEditPerm = perms.includes('admin:goods:edit')
+// ==================================
+
 const list = ref([])
 const loading = ref(true)
 const formVisible = ref(false)
@@ -236,4 +247,5 @@ onMounted(load)
 .btn-link { color: #1890ff; text-decoration: none; }
 .empty { padding: 40px; text-align: center; color: #666; }
 .time-cell { font-size: 12px; max-width: 180px; }
+.text-muted { color: #999; font-size: 13px; }
 </style>

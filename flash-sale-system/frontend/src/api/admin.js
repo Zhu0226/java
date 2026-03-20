@@ -25,3 +25,12 @@ export function preheat(id, stock) {
   return request.post(`/seckill/preheat/${id}/${stock}`) 
   // 如果你的后端预热是 GET 请求，请改为 request.get(...)
 }
+// 【订单管理】获取全量订单 (支持分页和多条件查询)
+export function listAdminOrders(params) {
+  return request.get('/admin/orders', { params })
+}
+
+// 【订单管理/客诉】强制取消订单
+export function cancelAdminOrder(orderId) {
+  return request.post(`/admin/orders/${orderId}/cancel`)
+}

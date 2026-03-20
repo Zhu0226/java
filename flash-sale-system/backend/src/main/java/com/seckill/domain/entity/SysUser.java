@@ -12,11 +12,11 @@ import java.time.LocalDateTime;
 public class SysUser {
 
     @TableId(type = IdType.AUTO)
-    private Long id;
-    private String username;
-    private String password;
-    private String realName;
-    private Integer status;
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
+    private Long id;// 用户ID
+    private String username;// 用户名
+    private String password;// 密码
+    private String realName;// 真实姓名
+    private Integer status;// 状态
+    private LocalDateTime createTime;// 创建时间
+    private LocalDateTime updateTime;// 更新时间
 }

@@ -19,23 +19,23 @@ import java.util.concurrent.TimeUnit;
 public class SysUserService {
 
     @Autowired
-    private SysUserMapper sysUserMapper;
+    private SysUserMapper sysUserMapper;// 用户
     @Autowired
-    private SysMenuMapper sysMenuMapper;
+    private SysMenuMapper sysMenuMapper;// 菜单
     @Autowired
-    private JwtUtils jwtUtils;
+    private JwtUtils jwtUtils;// JWT
     @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+    private StringRedisTemplate stringRedisTemplate;// Redis
 
-    public Map<String, Object> login(String username, String password) {
-        LambdaQueryWrapper<SysUser> query = new LambdaQueryWrapper<>();
-        query.eq(SysUser::getUsername, username).eq(SysUser::getPassword, password);
-        SysUser user = sysUserMapper.selectOne(query);
+    public Map<String, Object> login(String username, String password) {// 登录
+        LambdaQueryWrapper<SysUser> query = new LambdaQueryWrapper<>();// 创建条件
+        query.eq(SysUser::getUsername, username).eq(SysUser::getPassword, password);// 查询条件
+        SysUser user = sysUserMapper.selectOne(query);// 查询用户
 
         if (user == null) throw new BusinessException(401, "账号或密码错误");
         if (user.getStatus() == 0) throw new BusinessException(403, "该账号已被冻结");
 
-        List<String> perms = sysMenuMapper.selectPermsByUserId(user.getId());
+        List<String> perms = sysMenuMapper.selectPermsByUserId(user.getId());// 查询权限
 
         stringRedisTemplate.opsForValue().set(
                 "auth:perms:" + user.getId(),

@@ -17,14 +17,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 限流拦截器
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns("/seckill/preheat/**");
 
+        // 鉴权拦截器
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(
-                        "/auth/login",
+                        "/auth/login",     // 放行员工登录
+                        "/user/login",     // 放行C端买家登录
+                        "/user/register",  // 放行C端买家注册
                         "/error",
                         "/seckill/goods/**",
                         "/seckill/status/**"

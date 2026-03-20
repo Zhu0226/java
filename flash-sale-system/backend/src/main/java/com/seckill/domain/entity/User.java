@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 public class User {
 
     @TableId(type = IdType.AUTO)
-    private Long id;
-    private String username;
-    private String password;
-    private LocalDateTime createTime;
+    private Long id;// 用户ID
+    private String username;// 用户名
+    private String password;// 密码
+    private LocalDateTime createTime;// 创建时间
 }

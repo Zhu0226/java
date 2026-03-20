@@ -14,7 +14,6 @@
                 <div class="list-item active"><span>中国大陆版</span></div>
                 <div class="list-item"><span>中国港澳版</span></div>
                 <div class="list-item"><span>中国台湾版</span></div>
-                <div class="list-item"><span>京东全球版</span></div>
               </div>
             </div>
 
@@ -29,11 +28,11 @@
               
               <li class="spacer" v-if="perms.includes('mall:enterprise')">|</li>
               <li v-if="perms.includes('mall:enterprise')">
-                <a href="#" class="highlight">🏢 企业大宗采购专区</a>
+                <router-link to="/enterprise" class="highlight">🏢 企业大宗采购专区</router-link>
               </li>
 
-              <li class="spacer" v-if="perms.includes('admin:view')">|</li>
-              <li v-if="perms.includes('admin:view')">
+              <li class="spacer" v-if="isInternalStaff">|</li>
+              <li v-if="isInternalStaff">
                 <router-link to="/admin/goods" class="admin-link">💻 进入后台管理系统</router-link>
               </li>
             </ul>
@@ -41,38 +40,36 @@
 
           <div class="shortcut-right">
             <ul class="nav-links right-links">
-              <li>
-                <a href="#" @click.prevent="$router.push('/orders')" class="cart-top-link">
-                  <span class="cart-icon-small">🛒</span>购物车
-                </a>
-              </li>
-              <li><router-link to="/orders">我的订单</router-link></li>
-              
-              <li class="my-jd-dropdown">
-                <div class="my-jd-title">我的双喜 <span class="arrow">∨</span></div>
-                <div class="my-jd-list">
-                  <div class="my-jd-grid">
-                    <router-link to="/orders">待处理订单</router-link>
-                    <a href="#">我的问答</a>
-                    <a href="#">降价商品</a>
-                    <a href="#">返修退换货</a>
-                    <a href="#">我的关注</a>
+              <template v-if="!isInternalStaff">
+                <li>
+                  <a href="#" @click.prevent="$router.push('/cart')" class="cart-top-link">
+                    <span class="cart-icon-small">🛒</span>购物车
+                  </a>
+                </li>
+                
+                <li class="my-jd-dropdown">
+                  <div class="my-jd-title">我的双喜 <span class="arrow">∨</span></div>
+                  <div class="my-jd-list">
+                    <div class="my-jd-grid">
+                      <router-link to="/user?tab=orders">我的订单</router-link>
+                      <router-link to="/user?tab=drops">降价商品</router-link>
+                      <router-link to="/user?tab=favorites">我的关注</router-link>
+                    </div>
+                    <div class="my-jd-divider"></div>
+                    <div class="my-jd-grid">
+                      <router-link to="/user?tab=coins">我的喜币</router-link>
+                      <router-link to="/user?tab=coupons">我的优惠券</router-link>
+                      <router-link to="/user?tab=wallet">我的钱包</router-link>
+                    </div>
                   </div>
-                  <div class="my-jd-divider"></div>
-                  <div class="my-jd-grid">
-                    <a href="#">我的京豆</a>
-                    <a href="#">我的优惠券</a>
-                    <a href="#">我的白条</a>
-                    <a href="#">我的理财</a>
-                  </div>
-                </div>
-              </li>
+                </li>
+              </template>
 
-              <li v-if="isEnterprise">
-                <router-link to="/admin/goods" class="admin-link">👔 企业采购/后台</router-link>
-              </li>
+              <template v-else>
+                <li><router-link to="/admin/orders" class="admin-link">📋 订单管理台</router-link></li>
+                <li><router-link to="/admin/customers" class="admin-link">🎧 客服工作台</router-link></li>
+              </template>
               
-              <li><router-link to="/metrics">秒杀指标</router-link></li>
             </ul>
           </div>
 
@@ -96,14 +93,20 @@
 
           <div class="search-area">
             <div class="search-box">
-              <input type="text" placeholder="搜索秒杀商品、手机、家电..." />
-              <button class="search-btn">搜索</button>
+              <input 
+                type="text" 
+                v-model="searchKeyword" 
+                placeholder="搜索秒杀商品、手机、家电..." 
+                @keyup.enter="handleSearch"
+              />
+              <button class="search-btn" @click="handleSearch">搜索</button>
             </div>
-            <div class="hot-words">
-              <a href="#" class="highlight">每满300减40</a>
-              <a href="#">爆款手机</a>
-              <a href="#">家电秒杀</a>
-              <a href="#">低至5折</a>
+            
+            <div class="hot-words" v-if="!isInternalStaff">
+              <a href="#" class="highlight" @click.prevent="handleHotWord('每满300减40')">每满300减40</a>
+              <a href="#" @click.prevent="handleHotWord('爆款手机')">爆款手机</a>
+              <a href="#" @click.prevent="handleHotWord('家电秒杀')">家电秒杀</a>
+              <a href="#" @click.prevent="handleHotWord('低至5折')">低至5折</a>
             </div>
           </div>
 
@@ -120,18 +123,25 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const userId = ref(localStorage.getItem('userId') || '')
 const username = ref(localStorage.getItem('username') || '')
-// 新增：读取本地的真实权限数组
 const perms = ref(JSON.parse(localStorage.getItem('perms') || '[]'))
+
+// 搜索框双向绑定变量
+const searchKeyword = ref('')
 
 const route = useRoute()
 const router = useRouter()
 
-// 监听路由变化，及时更新状态
+const isInternalStaff = computed(() => {
+  return perms.value.includes('admin:view') || 
+         perms.value.includes('admin:goods:list') || 
+         perms.value.includes('kefu:view')
+})
+
 watch(() => route.path, () => {
   userId.value = localStorage.getItem('userId') || ''
   username.value = localStorage.getItem('username') || ''
@@ -147,6 +157,24 @@ function logoutUser() {
   username.value = ''
   perms.value = []
   router.push('/login')
+}
+
+// 触发搜索动作
+function handleSearch() {
+  if (!searchKeyword.value.trim()) {
+    alert('请输入您想要搜索的商品名称！')
+    return
+  }
+  // 模拟搜索结果提示
+  alert(`正在为您检索与【${searchKeyword.value}】相关的商品...\n（注：全局搜索功能正在开发中）`)
+}
+
+// 点击热词动作
+function handleHotWord(word) {
+  // 1. 将词语填入搜索框
+  searchKeyword.value = word
+  // 2. 自动触发搜索
+  handleSearch()
 }
 </script>
 
@@ -257,7 +285,7 @@ function logoutUser() {
   position: absolute;
   top: 29px;
   left: 50%; 
-  transform: translateX(-50%); /* 居中对齐下拉框，避免偏右 */
+  transform: translateX(-50%); 
   width: 260px; 
   background: #fff;
   border: 1px solid #eee;
@@ -297,7 +325,7 @@ function logoutUser() {
   gap: 12px;
 }
 .right-links {
-  gap: 18px; /* 加大右侧各项之间的无竖线间距，更贴近京东原版 */
+  gap: 18px; 
 }
 .nav-links a { color: #999; text-decoration: none; }
 .nav-links a:hover { color: #e1251b; }

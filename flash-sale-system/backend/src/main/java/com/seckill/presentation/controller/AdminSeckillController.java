@@ -24,7 +24,7 @@ public class AdminSeckillController {
 
     @RequiresPermission("admin:goods:list")
     @GetMapping("/{id}")
-    public ApiResponse<SeckillGoods> get(@PathVariable Long id) {
+    public ApiResponse<SeckillGoods> get(@PathVariable Long id)  {
         return ApiResponse.success(seckillService.getGoodsDetail(id));
     }
 

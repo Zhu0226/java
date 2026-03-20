@@ -1,6 +1,7 @@
 package com.seckill.application.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.seckill.common.ErrorCode;
 import com.seckill.common.exception.BusinessException;
 import com.seckill.domain.entity.SeckillGoods;
@@ -52,30 +53,30 @@ public class SeckillServiceImpl implements SeckillService {
     @Value("${seckill.order.async:false}")
     private boolean asyncOrder;
 
-    private static final String STOCK_PREFIX = "seckill:stock:";
-    private static final String PATH_PREFIX = "seckill:path:";
-    private static final String USER_ORDER_PREFIX = "seckill:order:user:";
-    private static final String GOODS_LIST_CACHE_KEY = "seckill:goods:list";
-    private static final String GOODS_DETAIL_CACHE_PREFIX = "seckill:goods:detail:";
-    private static final String CACHE_LOCK_PREFIX = "seckill:lock:";
+    private static final String STOCK_PREFIX = "seckill:stock:";//库存
+    private static final String PATH_PREFIX = "seckill:path:";//路径
+    private static final String USER_ORDER_PREFIX = "seckill:order:user:";//用户订单
+    private static final String GOODS_LIST_CACHE_KEY = "seckill:goods:list";//商品列表缓存
+    private static final String GOODS_DETAIL_CACHE_PREFIX = "seckill:goods:detail:";//商品详情缓存
+    private static final String CACHE_LOCK_PREFIX = "seckill:lock:";//锁
 
-    private static final String METRIC_TOTAL_KEY = "seckill:metric:total";
-    private static final String METRIC_SUCCESS_KEY = "seckill:metric:success";
-    private static final String METRIC_FAIL_KEY = "seckill:metric:fail";
+    private static final String METRIC_TOTAL_KEY = "seckill:metric:total";//秒杀统计
+    private static final String METRIC_SUCCESS_KEY = "seckill:metric:success";//秒杀成功
+    private static final String METRIC_FAIL_KEY = "seckill:metric:fail";//秒杀失败
 
     /** 安全释放锁：仅当 value 一致时删除，避免误删他人锁 */
     private static final String UNLOCK_LUA =
             "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
 
-    private static final int CACHE_LOCK_RETRY_MAX = 200;
-    private static final int CACHE_LOCK_SLEEP_MS = 50;
+    private static final int CACHE_LOCK_RETRY_MAX = 200;//缓存锁重试次数
+    private static final int CACHE_LOCK_SLEEP_MS = 50;//缓存锁重试间隔
 
     /** 本地售罄标记，秒杀结束后直接拦截 */
     private final ConcurrentHashMap<Long, Boolean> localOverMap = new ConcurrentHashMap<>();
 
     @Override
     public void preHeatStock(Long goodsId, int stock) {
-        if (stock <= 0) throw new BusinessException(ErrorCode.PREHEAT_STOCK_INVALID, "预热库存必须大于0");
+        if (stock <= 0) throw new BusinessException(ErrorCode.PREHEAT_STOCK_INVALID, "预热库存必须大于0");//
         SeckillGoods goods = goodsMapper.selectById(goodsId);
         if (goods == null) throw new BusinessException(ErrorCode.PREHEAT_GOODS_NOT_FOUND);
         int dbStock = goods.getStock() != null ? goods.getStock() : 0;
@@ -395,5 +396,63 @@ public class SeckillServiceImpl implements SeckillService {
     private Long getLongFromRedis(String key) {
         String val = stringRedisTemplate.opsForValue().get(key);
         return val != null ? Long.parseLong(val) : 0L;
+    }
+    @Override
+    public Page<SeckillOrder> listOrdersForAdmin(int page, int size, Long orderId, Long userId, Long goodsId, Integer status) {
+        Page<SeckillOrder> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<SeckillOrder> wrapper = new LambdaQueryWrapper<>();
+
+        // 动态组合查询条件
+        if (orderId != null) {
+            wrapper.eq(SeckillOrder::getId, orderId);
+        }
+        if (userId != null) {
+            wrapper.eq(SeckillOrder::getUserId, userId);
+        }
+        if (goodsId != null) {
+            wrapper.eq(SeckillOrder::getGoodsId, goodsId);
+        }
+        if (status != null) {
+            wrapper.eq(SeckillOrder::getStatus, status);
+        }
+        // 按创建时间倒序，最新的订单在最上面
+        wrapper.orderByDesc(SeckillOrder::getCreateTime);
+
+        return orderMapper.selectPage(pageParam, wrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean adminCancelOrder(Long orderId) {
+        SeckillOrder order = orderMapper.selectById(orderId);
+        // 如果订单不存在，或已经是取消状态，则无需操作
+        if (order == null || order.getStatus() == OrderStatus.CANCELLED.getCode()) {
+            return false;
+        }
+
+        // 企业级处理：如果是已支付状态（PAID），此处应调用微信/支付宝的退款 API。
+        // 为了完整性，我们允许管理员取消 待支付(0) 和 已支付(1) 的订单。
+        int n = orderMapper.updateStatus(orderId, order.getUserId(), OrderStatus.CANCELLED.getCode(), order.getStatus());
+
+        if (n > 0) {
+            // 1. 恢复数据库库存
+            goodsMapper.addStock(order.getGoodsId());
+
+            // 2. 恢复 Redis 库存 (安全判断：如果 Key 还存在才 increment)
+            Boolean hasKey = stringRedisTemplate.hasKey(STOCK_PREFIX + order.getGoodsId());
+            if (Boolean.TRUE.equals(hasKey)) {
+                stringRedisTemplate.opsForValue().increment(STOCK_PREFIX + order.getGoodsId());
+            }
+
+            // 3. 移除本地售罄标记（重要！否则用户还是买不了）
+            localOverMap.remove(order.getGoodsId());
+
+            // 4. 清除用户购买资格标记，允许该用户重新抢购
+            stringRedisTemplate.delete(USER_ORDER_PREFIX + order.getUserId() + ":" + order.getGoodsId());
+
+            log.info("[Admin] 强制取消订单成功，库存已回退。orderId={}, userId={}, goodsId={}", orderId, order.getUserId(), order.getGoodsId());
+            return true;
+        }
+        return false;
     }
 }

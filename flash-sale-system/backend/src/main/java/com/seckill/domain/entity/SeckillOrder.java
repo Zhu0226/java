@@ -12,10 +12,10 @@ import java.time.LocalDateTime;
 public class SeckillOrder {
 
     @TableId(type = IdType.AUTO)
-    private Long id;
-    private Long userId;
-    private Long goodsId;
-    private Integer status;
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
+    private Long id;// 订单编号
+    private Long userId;// 用户编号
+    private Long goodsId;// 商品编号
+    private Integer status;// 订单状态
+    private LocalDateTime createTime;// 创建时间
+    private LocalDateTime updateTime;// 更新时间
 }

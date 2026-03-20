@@ -19,8 +19,8 @@ public class AdminLoginController {
 
     @PostMapping("/login")
     public ApiResponse<Map<String, String>> login(@RequestBody Map<String, String> body) {
-        String username = body != null ? body.get("username") : null;
-        String password = body != null ? body.get("password") : null;
+        String username = body != null ? body.get("username") : null;// 获取用户名
+        String password = body != null ? body.get("password") : null;// 获取密码
         if (!jwtProperties.getLoginUsername().equals(username) || !jwtProperties.getLoginPassword().equals(password)) {
             return ApiResponse.error(401, "用户名或密码错误");
         }
